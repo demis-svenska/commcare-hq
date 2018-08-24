@@ -1,6 +1,17 @@
 hqDefine("users/js/mobile_workers", function() {
     var mobileWorker = function(options) {
-        var self = ko.mapping.fromJS(options);
+        var self = ko.mapping.fromJS(_.defaults(options || {}, {
+            username: '',
+            customFields: {},
+            first_name: '',
+            last_name: '',
+            phoneNumbers: [],
+            user_id: '',
+            location: null,
+            dateRegistered: '',
+            editUrl: '#',
+            action: 'deactivate',
+        }));
 
         self.mark_activated = ko.observable(false);
         self.mark_deactivated = ko.observable(false);
@@ -118,6 +129,21 @@ hqDefine("users/js/mobile_workers", function() {
         self.goToPage(1);
 
         return self;
+    };
+
+    self.mobileWorker = undefined;  // new worker being added
+    self.initializeMobileWorker = function() {
+        self.mobileWorker = mobileWorker();
+        hqImport('analytix/js/google').track.event('Manage Mobile Workers', 'New Mobile Worker', '');
+    };
+
+    self.allowMobileWorkerCreation = ko.computed(function() {
+        // TODO: mobileWorkerForm.$invalid || usernameAvailabilityStatus !== 'available'
+        return true;
+    });
+
+    self.submitNewMobileWorker = function() {
+        // TODO
     };
 
     $(function() {
