@@ -21,6 +21,7 @@ DECLARE
   _infra_tablename text;
   _household_tablename text;
   _person_tablename text;
+  _ucr_aww_tablename text
   _all_text text;
   _null_value text;
   _rollup_text text;
@@ -68,6 +69,7 @@ BEGIN
   EXECUTE 'SELECT table_name FROM ucr_table_name_mapping WHERE table_type = ' || quote_literal('usage') INTO _usage_tablename;
   EXECUTE 'SELECT table_name FROM ucr_table_name_mapping WHERE table_type = ' || quote_literal('household') INTO _household_tablename;
   EXECUTE 'SELECT table_name FROM ucr_table_name_mapping WHERE table_type = ' || quote_literal('person') INTO _person_tablename;
+  EXECUTE 'SELECT table_name FROM ucr_table_name_mapping WHERE table_type = ' || quote_literal('aww_user') INTO _ucr_aww_tablename;
 
   -- Setup base locations and month
   EXECUTE 'INSERT INTO ' || quote_ident(_tablename5) ||
@@ -212,7 +214,6 @@ BEGIN
     'num_launched_districts = ut.num_launched_awcs, ' ||
     'num_launched_blocks = ut.num_launched_awcs, ' ||
     'num_launched_supervisors = ut.num_launched_awcs, ' ||
-    'num_launched_awcs = ut.num_launched_awcs, ' ||
     'usage_num_add_person = ut.usage_num_add_person, ' ||
     'usage_num_add_pregnancy = ut.usage_num_add_pregnancy, ' ||
     'usage_num_home_visit = ut.usage_num_home_visit, ' ||
@@ -251,6 +252,19 @@ BEGIN
     'FROM ' || quote_ident(_usage_tablename) || ' ' ||
     'WHERE month = ' || quote_literal(_start_date) || ' GROUP BY awc_id, month) ut ' ||
   'WHERE ut.month = agg_awc.month AND ut.awc_id = agg_awc.awc_id';
+
+
+  -- Update num launched AWCs based on Household Registration(hh_num)
+  EXECUTE 'UPDATE ' || quote_ident(_tablename5) || ' agg_awc SET ' ||
+     'num_launched_awcs = ut.num_launched_awcs ' ||
+     'FROM (SELECT ' ||
+     'awc_id, ' ||
+     'month, ' ||
+     'CASE WHEN sum(hh_num) > 0 THEN 1 ELSE 0 END as num_launched_awcs, ' ||
+     'FROM ' || quote_ident(_ucr_aww_tablename) || ' ' ||
+     'WHERE month = ' || quote_literal(_start_date) || ' GROUP BY awc_id, month) ut ' ||
+     'WHERE ut.month = agg_awc.month AND ut.awc_id = agg_awc.awc_id';
+
 
   -- Update num launched AWCs based on previous month as well
   EXECUTE 'UPDATE ' || quote_ident(_tablename5) || ' agg_awc SET ' ||
